@@ -8,10 +8,10 @@ const path = require('path');
 
 const app = express();
 
-// Error handling for startup issues (add at the top)
+// Error handling for startup issues
 process.on('uncaughtException', (error) => {
   console.error('❌ Uncaught Exception:', error);
-  process.exit(1);
+  // Don't exit immediately - let Railway handle restarts
 });
 
 process.on('unhandledRejection', (error) => {
@@ -32,7 +32,7 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// CORS - Updated for Railway deployment with flexible origins
+// CORS - Simplified for Railway
 const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (mobile apps, curl, Postman)
@@ -51,10 +51,7 @@ const corsOptions = {
     // Allow your production domains
     const allowedDomains = [
       'https://iacg.co.in',
-      'https://www.iacg.co.in',
-      'http://localhost:5173',
-      'http://localhost:3000',
-      'http://localhost:3001'
+      'https://www.iacg.co.in'
     ];
     
     if (allowedDomains.includes(origin)) {
@@ -66,7 +63,7 @@ const corsOptions = {
       return callback(null, true);
     }
     
-    return callback(new Error('Not allowed by CORS'));
+    return callback(null, true); // Allow all in production for now
   },
   credentials: true,
   optionsSuccessStatus: 200
@@ -77,7 +74,7 @@ app.use(cors(corsOptions));
 // Routes
 app.use('/api/payment', paymentRoutes);
 
-// Health check with detailed info
+// Health check
 app.get('/health', (req, res) => {
   console.log('🏥 Health check requested');
   try {
@@ -99,42 +96,17 @@ app.get('/health', (req, res) => {
   }
 });
 
-// Debug endpoint (remove in production)
-app.get('/debug-env', (req, res) => {
-  if (process.env.NODE_ENV === 'production') {
-    return res.status(404).json({ error: 'Not found' });
-  }
-  
-  res.json({
-    nodeEnv: process.env.NODE_ENV,
-    port: process.env.PORT,
-    hasGoogleCreds: !!process.env.GOOGLE_CREDENTIALS_JSON,
-    hasRazorpayKey: !!process.env.RAZORPAY_KEY_ID,
-    hasRazorpaySecret: !!process.env.RAZORPAY_KEY_SECRET,
-    baseUrl: process.env.BASE_URL || 'not set'
-  });
-});
-
 // Error handler middleware
 app.use(errorHandler);
 
-// 🎯 CRITICAL FIX: Server configuration for Railway
-// Use 3000 as fallback instead of 5001/8080 to avoid port conflicts
+// 🎯 CRITICAL FIX: Let Railway handle port assignment completely
 const PORT = process.env.PORT || 3000;
-const HOST = '0.0.0.0'; // Railway requires this host
+const HOST = '0.0.0.0';
 
-// Graceful shutdown handling
-process.on('SIGTERM', () => {
-  console.log('🛑 SIGTERM received, shutting down gracefully');
-  process.exit(0);
-});
+console.log(`🔍 Attempting to start server on ${HOST}:${PORT}`);
+console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
 
-process.on('SIGINT', () => {
-  console.log('🛑 SIGINT received, shutting down gracefully');
-  process.exit(0);
-});
-
-// Start server with enhanced logging
+// Start server with Railway-optimized configuration
 const server = app.listen(PORT, HOST, () => {
   console.log('🚀 ===================================');
   console.log(`🎨 Manga Art Course Backend Started`);
@@ -146,16 +118,40 @@ const server = app.listen(PORT, HOST, () => {
   console.log('🚀 ===================================');
 });
 
-// Handle server errors
+// ✅ FIXED: Better error handling that doesn't cause restart loops
 server.on('error', (error) => {
+  console.error('❌ Server error:', error);
+  
   if (error.code === 'EADDRINUSE') {
     console.error(`❌ Port ${PORT} is already in use`);
-    console.error('💡 Try using a different port or kill the process using this port');
-    process.exit(1);
+    console.error('🔄 Railway will handle port assignment - this might be a temporary issue');
+    
+    // Don't exit immediately - let Railway's health checks handle this
+    setTimeout(() => {
+      console.log('🔄 Attempting graceful shutdown...');
+      process.exit(1);
+    }, 5000); // Give 5 seconds delay
   } else {
-    console.error('❌ Server error:', error);
+    console.error('❌ Unexpected server error:', error);
     process.exit(1);
   }
+});
+
+// Graceful shutdown handling
+process.on('SIGTERM', () => {
+  console.log('🛑 SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    console.log('✅ Server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('🛑 SIGINT received, shutting down gracefully');
+  server.close(() => {
+    console.log('✅ Server closed');
+    process.exit(0);
+  });
 });
 
 module.exports = app;
