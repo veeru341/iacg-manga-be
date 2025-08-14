@@ -97,20 +97,21 @@ app.get('/health', (req, res) => {
 
 // Debug endpoint (only for non-production)
 app.get('/debug-env', (req, res) => {
-  if (process.env.NODE_ENV === 'production') {
-    return res.status(404).json({ error: 'Not found' });
-  }
-  
+  const allow = process.env.ENV_DEBUG_SECRET && req.query.key === process.env.ENV_DEBUG_SECRET;
+  if (!allow) return res.status(404).json({ error: 'Not found' });
+
   res.json({
     nodeEnv: process.env.NODE_ENV,
-    port: process.env.PORT,
-    hasGoogleCreds: !!process.env.GOOGLE_CREDENTIALS_JSON,
+    portPresent: !!process.env.PORT,
+    hasGoogleCredsJson: !!process.env.GOOGLE_CREDENTIALS_JSON,
+    hasGoogleCredsBase64: !!process.env.GOOGLE_CREDENTIALS_BASE64,
     hasRazorpayKey: !!process.env.RAZORPAY_KEY_ID,
     hasRazorpaySecret: !!process.env.RAZORPAY_KEY_SECRET,
-    baseUrl: process.env.BASE_URL || 'not set',
+    baseUrl: process.env.BASE_URL ? 'set' : 'not set',
     googleSheetId: process.env.GOOGLE_SHEET_ID ? 'set' : 'not set'
   });
 });
+
 
 // Catch-all route for undefined endpoints
 app.get('*', (req, res) => {
