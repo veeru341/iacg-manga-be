@@ -97,9 +97,8 @@ app.get('/health', (req, res) => {
 
 // Debug endpoint (only for non-production)
 app.get('/debug-env', (req, res) => {
-  const allow = process.env.ENV_DEBUG_SECRET && req.query.key === process.env.ENV_DEBUG_SECRET;
+  const allow = process.env.NODE_ENV !== 'production' || process.env.ALLOW_DEBUG_ENV === 'true';
   if (!allow) return res.status(404).json({ error: 'Not found' });
-
   res.json({
     nodeEnv: process.env.NODE_ENV,
     portPresent: !!process.env.PORT,
@@ -111,6 +110,7 @@ app.get('/debug-env', (req, res) => {
     googleSheetId: process.env.GOOGLE_SHEET_ID ? 'set' : 'not set'
   });
 });
+
 
 
 // Catch-all route for undefined endpoints
