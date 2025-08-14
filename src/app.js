@@ -96,21 +96,16 @@ app.get('/health', (req, res) => {
 });
 
 // Debug endpoint (only for non-production)
-app.get('/debug-env', (req, res) => {
-  const allow = process.env.NODE_ENV !== 'production' || process.env.ALLOW_DEBUG_ENV === 'true';
-  if (!allow) return res.status(404).json({ error: 'Not found' });
-  res.json({
-    nodeEnv: process.env.NODE_ENV,
-    portPresent: !!process.env.PORT,
-    hasGoogleCredsJson: !!process.env.GOOGLE_CREDENTIALS_JSON,
-    hasGoogleCredsBase64: !!process.env.GOOGLE_CREDENTIALS_BASE64,
-    hasRazorpayKey: !!process.env.RAZORPAY_KEY_ID,
-    hasRazorpaySecret: !!process.env.RAZORPAY_KEY_SECRET,
-    baseUrl: process.env.BASE_URL ? 'set' : 'not set',
-    googleSheetId: process.env.GOOGLE_SHEET_ID ? 'set' : 'not set'
-  });
+console.log('ENV presence check:', {
+  NODE_ENV: process.env.NODE_ENV,
+  PORT_present: !!process.env.PORT,
+  GOOGLE_CREDENTIALS_JSON_present: !!process.env.GOOGLE_CREDENTIALS_JSON,
+  GOOGLE_CREDENTIALS_BASE64_present: !!process.env.GOOGLE_CREDENTIALS_BASE64,
+  GOOGLE_SHEET_ID_present: !!process.env.GOOGLE_SHEET_ID,
+  RAZORPAY_KEY_ID_present: !!process.env.RAZORPAY_KEY_ID,
+  RAZORPAY_KEY_SECRET_present: !!process.env.RAZORPAY_KEY_SECRET,
+  BASE_URL_present: !!process.env.BASE_URL
 });
-
 
 
 // Catch-all route for undefined endpoints
